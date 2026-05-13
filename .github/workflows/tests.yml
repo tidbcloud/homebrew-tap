@@ -1,0 +1,38 @@
+name: Testing
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+      - name: Check formulae
+        run: brew test-bot --only-tap-syntax
+
+  build:
+    needs: check
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner:
+          - macos-14
+          - macos-15
+          - macos-26
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+      - run: brew test-bot --only-cleanup-before
+      - run: brew test-bot --only-setup
+      - run: brew test-bot --only-tap-syntax
+      - run: brew test-bot --only-formulae
+      - name: Upload bottles as artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bottles_${{ matrix.runner }}
+          path: "*.bottle.*"
