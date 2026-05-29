@@ -5,34 +5,41 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
-  check:
-    runs-on: ubuntu-latest
+  audit:
+    runs-on: macos-14
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@main
-      - name: Check formulae
-        run: brew test-bot --only-tap-syntax
+      - name: Tap repository
+        run: brew tap --custom-remote tidbcloud/tap "$GITHUB_WORKSPACE"
+      - name: Audit formula
+        run: brew audit --strict --online tidbcloud/tap/lakesql
 
-  build:
-    needs: check
+  smoke:
+    needs: audit
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
-        runner:
-          - macos-14
-          - macos-15
-          - macos-26
+        include:
+          - runner: macos-14
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@main
-      - run: brew test-bot --only-cleanup-before
-      - run: brew test-bot --only-setup
-      - run: brew test-bot --only-tap-syntax
-      - run: brew test-bot --only-formulae
-      - name: Upload bottles as artifact
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: bottles_${{ matrix.runner }}
-          path: "*.bottle.*"
+      - name: Tap repository
+        run: brew tap --custom-remote tidbcloud/tap "$GITHUB_WORKSPACE"
+      - name: Install formula
+        run: brew install tidbcloud/tap/lakesql
+      - name: Smoke test binary
+        run: brew test tidbcloud/tap/lakesql
