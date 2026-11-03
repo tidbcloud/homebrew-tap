@@ -5,3 +5,5 @@ Install LakeSQL with:
 ```bash
 brew install tidbcloud/homebrew-tap/lakesql
 ```
+
+<!-- automerge capability check, no-op -->
